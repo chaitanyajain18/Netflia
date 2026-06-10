@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #141414; color: #fff; font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  #app { min-height: 100vh; }
+
+  /* NAV */
+  nav { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 4%; height: 68px; background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%); backdrop-filter: blur(2px); }
+  .nav-logo { color: #E50914; font-size: 28px; font-weight: 900; letter-spacing: -1px; cursor: pointer; }
+  .nav-links { display: flex; gap: 20px; }
+  .nav-links span { font-size: 13px; color: #e5e5e5; cursor: pointer; transition: color 0.2s; }
+  .nav-links span:hover, .nav-links span.active { color: #fff; }
+  .nav-right { display: flex; align-items: center; gap: 20px; }
+  .nav-search { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.5); border: 1px solid #fff; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+  .nav-search input { background: transparent; border: none; outline: none; color: #fff; font-size: 13px; width: 180px; }
+  .nav-avatar { width: 32px; height: 32px; border-radius: 4px; background: #E50914; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+  /* HERO */
+  .hero { position: relative; height: 80vh; min-height: 500px; background: #000; overflow: hidden; display: flex; align-items: flex-end; padding: 0 4% 8%; }
+  .hero-bg { position: absolute; inset: 0; object-fit: cover; width: 100%; height: 100%; opacity: 0.7; transition: opacity 0.8s; }
+  .hero-gradient { position: absolute; inset: 0; background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, transparent 100%), linear-gradient(to top, rgba(20,20,20,1) 0%, transparent 30%); }
+  .hero-content { position: relative; z-index: 2; max-width: 500px; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(229,9,20,0.9); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; padding: 4px 10px; border-radius: 2px; margin-bottom: 14px; text-transform: uppercase; }
+  .hero-title { font-size: 52px; font-weight: 900; line-height: 1; margin-bottom: 16px; text-shadow: 2px 2px 8px rgba(0,0,0,0.5); }
+  .hero-meta { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; font-size: 13px; }
+  .hero-meta .match { color: #46d369; font-weight: 700; }
+  .hero-meta .year, .hero-meta .rating { color: #ccc; }
+  .hero-meta .hd { border: 1px solid #ccc; color: #ccc; padding: 1px 5px; border-radius: 2px; font-size: 11px; }
+  .hero-desc { font-size: 15px; line-height: 1.5; color: #ddd; margin-bottom: 20px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .hero-desc.ai-loading { color: #999; font-style: italic; }
+  .hero-btns { display: flex; gap: 10px; }
+  .btn-play { display: flex; align-items: center; gap: 8px; background: #fff; color: #000; border: none; padding: 10px 24px; border-radius: 4px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+  .btn-play:hover { background: rgba(255,255,255,0.85); }
+  .btn-info { display: flex; align-items: center; gap: 8px; background: rgba(109,109,110,0.7); color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-size: 16px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+  .btn-info:hover { background: rgba(109,109,110,0.9); }
+
+  /* ROWS */
+  .rows { padding: 0 0 60px; }
+  .row { margin-bottom: 40px; }
+  .row-title { font-size: 18px; font-weight: 700; color: #e5e5e5; padding: 0 4%; margin-bottom: 10px; }
+  .row-title .ai-tag { font-size: 11px; background: #E50914; padding: 2px 6px; border-radius: 2px; margin-left: 8px; vertical-align: middle; font-weight: 700; letter-spacing: 1px; }
+  .row-track-wrap { position: relative; }
+  .row-track { display: flex; gap: 6px; padding: 8px 4%; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
+  .row-track::-webkit-scrollbar { display: none; }
+  .row-arrow { position: absolute; top: 0; bottom: 0; width: 60px; display: flex; align-items: center; justify-content: center; background: rgba(20,20,20,0.7); cursor: pointer; z-index: 10; opacity: 0; transition: opacity 0.2s; font-size: 28px; color: #fff; }
+  .row-track-wrap:hover .row-arrow { opacity: 1; }
+  .row-arrow.left { left: 0; }
+  .row-arrow.right { right: 0; }
+
+  /* CARD */
+  .card { flex: 0 0 180px; height: 102px; border-radius: 4px; overflow: hidden; cursor: pointer; position: relative; transition: transform 0.3s, z-index 0s 0.3s; background: #333; }
+  .card:hover { transform: scale(1.08); z-index: 10; transition: transform 0.3s; }
+  .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%); opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px; }
+  .card:hover .card-overlay { opacity: 1; }
+  .card-title { font-size: 11px; font-weight: 700; line-height: 1.2; }
+  .card-actions { display: flex; gap: 6px; margin-top: 5px; }
+  .card-btn { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #fff; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; color: #fff; transition: background 0.2s; }
+  .card-btn:hover { background: rgba(255,255,255,0.2); }
+  .card-btn.play { background: #fff; color: #000; border-color: #fff; }
+  .card-btn.play:hover { background: #ddd; }
+  .card-skeleton { background: #333; animation: shimmer 1.5s infinite; }
+  @keyframes shimmer { 0% { background: #2a2a2a; } 50% { background: #3a3a3a; } 100% { background: #2a2a2a; } }
+
+  /* MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+  .modal-bg.open { opacity: 1; pointer-events: all; }
+  .modal { background: #181818; border-radius: 8px; width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative; }
+  .modal-hero { position: relative; height: 300px; background: #333; border-radius: 8px 8px 0 0; overflow: hidden; }
+  .modal-hero img { width: 100%; height: 100%; object-fit: cover; }
+  .modal-hero-gradient { position: absolute; inset: 0; background: linear-gradient(to top, #181818 0%, transparent 50%); }
+  .modal-close { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; background: #181818; border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+  .modal-body { padding: 0 24px 30px; }
+  .modal-title { font-size: 28px; font-weight: 900; margin-bottom: 8px; }
+  .modal-meta { display: flex; gap: 14px; align-items: center; font-size: 13px; margin-bottom: 16px; flex-wrap: wrap; }
+  .modal-meta .match { color: #46d369; font-weight: 700; }
+  .modal-btns { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .modal-desc { font-size: 14px; line-height: 1.6; color: #ccc; margin-bottom: 20px; }
+  .modal-cast { font-size: 13px; color: #999; line-height: 1.7; }
+  .modal-cast strong { color: #fff; }
+  .ai-desc { background: #0f0f0f; border-left: 3px solid #E50914; padding: 12px 16px; border-radius: 0 4px 4px 0; margin-bottom: 16px; }
+  .ai-desc-label { font-size: 11px; color: #E50914; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-desc-text { font-size: 13px; line-height: 1.6; color: #ccc; }
+  .ai-typing { display: inline-block; width: 8px; height: 14px; background: #E50914; animation: blink 1s infinite; margin-left: 2px; vertical-align: middle; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* SEARCH */
+  .search-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 150; padding: 80px 4% 40px; display: none; }
+  .search-overlay.open { display: block; }
+  .search-close { position: absolute; top: 20px; right: 30px; background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+  .search-input-wrap { display: flex; align-items: center; border-bottom: 2px solid #fff; margin-bottom: 40px; padding-bottom: 8px; }
+  .search-input-wrap input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-size: 28px; font-weight: 300; }
+  .search-input-wrap i { font-size: 28px; color: #ccc; margin-right: 16px; }
+  .search-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+  .search-result-card { aspect-ratio: 16/9; border-radius: 4px; overflow: hidden; cursor: pointer; position: relative; background: #333; }
+  .search-result-card img { width: 100%; height: 100%; object-fit: cover; }
+  .search-result-title { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 12px 8px 8px; font-size: 12px; font-weight: 700; }
+  .search-ai { background: #141414; border: 1px solid #E50914; border-radius: 8px; padding: 20px; margin-bottom: 30px; }
+  .search-ai-title { font-size: 14px; color: #E50914; font-weight: 700; margin-bottom: 10px; letter-spacing: 0.5px; }
+  .search-ai-text { font-size: 14px; color: #ccc; line-height: 1.6; }
+
+  /* MY LIST PANEL */
+  .mylist-empty { text-align: center; color: #666; padding: 60px 20px; }
+  .mylist-empty .icon { font-size: 48px; margin-bottom: 16px; }
+
+  /* TOASTS */
+  .toast-wrap { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast { background: #fff; color: #000; padding: 10px 20px; border-radius: 4px; font-size: 13px; font-weight: 700; animation: toastIn 0.3s ease; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* GENRE PILLS */
+  .genre-pills { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 4% 16px; }
+  .genre-pill { padding: 6px 16px; border-radius: 20px; border: 1px solid #555; font-size: 12px; color: #ccc; cursor: pointer; transition: all 0.2s; }
+  .genre-pill:hover, .genre-pill.active { background: #E50914; border-color: #E50914; color: #fff; }
+
+  /* TABS */
+  .nav-tabs { display: flex; gap: 0; border-bottom: 1px solid #333; margin-bottom: 24px; }
+  .nav-tab { padding: 12px 20px; font-size: 13px; color: #999; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .nav-tab:hover { color: #fff; }
+  .nav-tab.active { color: #fff; border-bottom-color: #E50914; }
+
+  /* PAGE SECTIONS */
+  .page-section { display: none; }
+  .page-section.active { display: block; }
+
+  /* MY LIST */
+  .mylist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; padding: 0 4%; }
+  .mylist-card { aspect-ratio: 16/9; border-radius: 4px; overflow: hidden; cursor: pointer; position: relative; background: #333; }
+  .mylist-card img { width: 100%; height: 100%; object-fit: cover; }
+  .mylist-title { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 12px 8px 8px; font-size: 12px; font-weight: 700; }
+  .mylist-remove { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.7); border: 1.5px solid #fff; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<nav>
+  <div class="nav-logo" onclick="showSection('home')">NETFLAI</div>
+  <div class="nav-links">
+    <span class="active" onclick="showSection('home')">Home</span>
+    <span onclick="showSection('tvshows')">TV Shows</span>
+    <span onclick="showSection('movies')">Movies</span>
+    <span onclick="showSection('mylist')">My List</span>
+  </div>
+  <div class="nav-right">
+    <div class="nav-search" onclick="openSearch()">
+      <i class="ti ti-search" style="font-size:14px; color:#ccc"></i>
+      <input id="search-input-nav" placeholder="Titles, people, genres" readonly />
+    </div>
+    <div class="nav-avatar">U</div>
+  </div>
+</nav>
+
+<div id="section-home" class="page-section active">
+  <div class="hero" id="hero-section">
+    <img class="hero-bg" id="hero-img" src="" alt="" />
+    <div class="hero-gradient"></div>
+    <div class="hero-content">
+      <div class="hero-badge">⬤ NOW TRENDING</div>
+      <div class="hero-title" id="hero-title"></div>
+      <div class="hero-meta">
+        <span class="match" id="hero-match"></span>
+        <span class="year" id="hero-year"></span>
+        <span class="hd">HD</span>
+        <span class="rating" id="hero-rating"></span>
+      </div>
+      <div class="hero-desc" id="hero-desc"></div>
+      <div class="hero-btns">
+        <button class="btn-play" onclick="playHero()">▶ Play</button>
+        <button class="btn-info" onclick="openHeroModal()">ℹ More Info</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="rows" id="rows-container"></div>
+</div>
+
+<div id="section-tvshows" class="page-section">
+  <div style="padding: 90px 4% 0">
+    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 20px;">TV Shows</h1>
+    <div class="genre-pills" id="tvshow-genres"></div>
+    <div class="rows" id="tvshow-rows"></div>
+  </div>
+</div>
+
+<div id="section-movies" class="page-section">
+  <div style="padding: 90px 4% 0">
+    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 20px;">Movies</h1>
+    <div class="genre-pills" id="movies-genres"></div>
+    <div class="rows" id="movies-rows"></div>
+  </div>
+</div>
+
+<div id="section-mylist" class="page-section">
+  <div style="padding: 90px 4% 0">
+    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 24px;">My List</h1>
+    <div class="mylist-grid" id="mylist-grid"></div>
+    <div class="mylist-empty" id="mylist-empty" style="display:none">
+      <div class="icon">+</div>
+      <p style="font-size:16px; font-weight:600; color:#ccc; margin-bottom:8px">Your list is empty</p>
+      <p style="font-size:13px">Add movies and shows by clicking the + button on any title</p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-hero">
+      <img id="modal-img" src="" alt="" />
+      <div class="modal-hero-gradient"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-meta" id="modal-meta"></div>
+      <div class="modal-btns">
+        <button class="btn-play" style="font-size:14px; padding:8px 20px" onclick="playModal()">▶ Play</button>
+        <button class="btn-info" style="font-size:14px; padding:8px 20px" id="modal-mylist-btn" onclick="toggleMyList()">+ My List</button>
+        <button class="btn-info" style="font-size:14px; padding:8px 20px" onclick="likeModal()">👍</button>
+      </div>
+      <div class="modal-desc" id="modal-desc"></div>
+      <div class="ai-desc" id="ai-desc-box">
+        <div class="ai-desc-label">🤖 AI Insight</div>
+        <div class="ai-desc-text" id="ai-desc-text">Loading AI analysis...</div>
+      </div>
+      <div class="modal-cast" id="modal-cast"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-overlay" id="search-overlay">
+  <button class="search-close" onclick="closeSearch()">✕</button>
+  <div class="search-input-wrap">
+    <i class="ti ti-search"></i>
+    <input id="search-main-input" placeholder="Search titles, genres, people..." oninput="handleSearch(this.value)" autofocus />
+  </div>
+  <div class="search-ai" id="search-ai" style="display:none">
+    <div class="search-ai-title">🤖 AI Recommendations</div>
+    <div class="search-ai-text" id="search-ai-text"></div>
+  </div>
+  <div class="search-results" id="search-results"></div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const MOVIES = [
+  { id:1, title:"Interstellar", year:2014, match:98, rating:"PG-13", genre:["Sci-Fi","Drama"], type:"movie", cast:"Matthew McConaughey, Anne Hathaway, Jessica Chastain", img:"https://image.tmdb.org/t/p/w780/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", thumb:"https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", desc:"When Earth's future is threatened by crop blight, a former NASA pilot leads a mission through a wormhole to find humanity's new home." },
+  { id:2, title:"Oppenheimer", year:2023, match:97, rating:"R", genre:["Drama","History"], type:"movie", cast:"Cillian Murphy, Emily Blunt, Matt Damon", img:"https://image.tmdb.org/t/p/w780/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", thumb:"https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg", desc:"The story of American scientist J. Robert Oppenheimer and his role in the development of the atomic bomb during World War II." },
+  { id:3, title:"The Dark Knight", year:2008, match:99, rating:"PG-13", genre:["Action","Drama"], type:"movie", cast:"Christian Bale, Heath Ledger, Aaron Eckhart", img:"https://image.tmdb.org/t/p/w780/qJ2tW6WMUDux911r6m7haRef0WH.jpg", thumb:"https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg", desc:"Batman faces his greatest challenge yet when the Joker, a criminal mastermind, plunges Gotham City into anarchy." },
+  { id:4, title:"Dune: Part Two", year:2024, match:96, rating:"PG-13", genre:["Sci-Fi","Adventure"], type:"movie", cast:"Timothée Chalamet, Zendaya, Rebecca Ferguson", img:"https://image.tmdb.org/t/p/w780/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", thumb:"https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg", desc:"Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family." },
+  { id:5, title:"Parasite", year:2019, match:99, rating:"R", genre:["Thriller","Drama"], type:"movie", cast:"Song Kang-ho, Choi Woo-shik, Park So-dam", img:"https://image.tmdb.org/t/p/w780/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", thumb:"https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", desc:"Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan." },
+  { id:6, title:"Everything Everywhere All at Once", year:2022, match:97, rating:"R", genre:["Sci-Fi","Comedy"], type:"movie", cast:"Michelle Yeoh, Ke Huy Quan, Jamie Lee Curtis", img:"https://image.tmdb.org/t/p/w780/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg", thumb:"https://image.tmdb.org/t/p/w500/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg", desc:"An aging Chinese immigrant is swept up in an insane adventure in which she alone can save existence by exploring other universes." },
+  { id:7, title:"The Shawshank Redemption", year:1994, match:99, rating:"R", genre:["Drama"], type:"movie", cast:"Tim Robbins, Morgan Freeman, Bob Gunton", img:"https://image.tmdb.org/t/p/w780/9cqNxx0GxF0bAY0tKmluf3mMGS2.jpg", thumb:"https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bAY0tKmluf3mMGS2.jpg", desc:"Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency." },
+  { id:8, title:"Poor Things", year:2023, match:95, rating:"R", genre:["Comedy","Drama"], type:"movie", cast:"Emma Stone, Mark Ruffalo, Willem Dafoe", img:"https://image.tmdb.org/t/p/w780/kCGlIMHnOm8JPXIf4Cch39KDGBZ.jpg", thumb:"https://image.tmdb.org/t/p/w500/kCGlIMHnOm8JPXIf4Cch39KDGBZ.jpg", desc:"The incredible tale and fantastical evolution of Bella Baxter, a young woman brought back to life by the brilliant and unorthodox scientist." },
+  { id:9, title:"Avatar: The Way of Water", year:2022, match:90, rating:"PG-13", genre:["Sci-Fi","Adventure"], type:"movie", cast:"Sam Worthington, Zoe Saldaña, Sigourney Weaver", img:"https://image.tmdb.org/t/p/w780/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg", thumb:"https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg", desc:"Jake Sully lives with his newfound family formed on the extrasolar moon Pandora. Once a familiar threat returns to finish what was previously started." },
+  { id:10, title:"The Godfather", year:1972, match:99, rating:"R", genre:["Drama","Crime"], type:"movie", cast:"Marlon Brando, Al Pacino, James Caan", img:"https://image.tmdb.org/t/p/w780/3bhkrj58Vtu7enYsLe1rgjy7pHb.jpg", thumb:"https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsLe1rgjy7pHb.jpg", desc:"The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son." },
+  { id:11, title:"Inception", year:2010, match:98, rating:"PG-13", genre:["Sci-Fi","Thriller"], type:"movie", cast:"Leonardo DiCaprio, Joseph Gordon-Levitt, Elliot Page", img:"https://image.tmdb.org/t/p/w780/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", thumb:"https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", desc:"A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea." },
+  { id:12, title:"Spider-Man: Across the Spider-Verse", year:2023, match:97, rating:"PG", genre:["Animation","Action"], type:"movie", cast:"Shameik Moore, Hailee Steinfeld, Oscar Isaac", img:"https://image.tmdb.org/t/p/w780/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg", thumb:"https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg", desc:"Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its very existence." },
+];
+
+const SHOWS = [
+  { id:101, title:"Breaking Bad", year:2008, match:99, rating:"TV-MA", genre:["Drama","Crime","Thriller"], type:"show", cast:"Bryan Cranston, Aaron Paul, Anna Gunn", img:"https://image.tmdb.org/t/p/w780/ggFHVNu6YYI5L9pCfOacjizRGt.jpg", thumb:"https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg", desc:"A high school chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine." },
+  { id:102, title:"Stranger Things", year:2016, match:97, rating:"TV-14", genre:["Sci-Fi","Horror","Drama"], type:"show", cast:"Millie Bobby Brown, Finn Wolfhard, Winona Ryder", img:"https://image.tmdb.org/t/p/w780/49WJfeN0moxb9IPfGn8AIqMGskD.jpg", thumb:"https://image.tmdb.org/t/p/w500/49WJfeN0moxb9IPfGn8AIqMGskD.jpg", desc:"When a young boy disappears, his mother, a police chief, and his friends must confront terrifying supernatural forces." },
+  { id:103, title:"The Last of Us", year:2023, match:98, rating:"TV-MA", genre:["Drama","Sci-Fi","Horror"], type:"show", cast:"Pedro Pascal, Bella Ramsey, Gabriel Luna", img:"https://image.tmdb.org/t/p/w780/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg", thumb:"https://image.tmdb.org/t/p/w500/uKvVjHNqB5VmOrdxqAt2F7J78ED.jpg", desc:"Joel, a hardened survivor, is hired to smuggle Ellie, a 14-year-old girl, out of an oppressive quarantine zone in a post-apocalyptic America." },
+  { id:104, title:"Succession", year:2018, match:99, rating:"TV-MA", genre:["Drama","Comedy"], type:"show", cast:"Brian Cox, Jeremy Strong, Sarah Snook", img:"https://image.tmdb.org/t/p/w780/e2X8Hp6qUqsVv8i4T7Wbs6zQNE.jpg", thumb:"https://image.tmdb.org/t/p/w500/e2X8Hp6qUqsVv8i4T7Wbs6zQNE.jpg", desc:"The Roy family is known for controlling the biggest media and entertainment company in the world. But all that is put in question when their father steps back." },
+  { id:105, title:"The Bear", year:2022, match:96, rating:"TV-MA", genre:["Drama","Comedy"], type:"show", cast:"Jeremy Allen White, Ayo Edebiri, Ebon Moss-Bachrach", img:"https://image.tmdb.org/t/p/w780/sHFlbKS3WLqMnp9t2ghADIJFnuQ.jpg", thumb:"https://image.tmdb.org/t/p/w500/sHFlbKS3WLqMnp9t2ghADIJFnuQ.jpg", desc:"A young chef from the fine dining world returns to Chicago to run his family's sandwich shop." },
+  { id:106, title:"House of the Dragon", year:2022, match:94, rating:"TV-MA", genre:["Fantasy","Drama"], type:"show", cast:"Paddy Considine, Matt Smith, Emma D'Arcy", img:"https://image.tmdb.org/t/p/w780/etj8E2o0Bud0HkONVQPjyCkIvpv.jpg", thumb:"https://image.tmdb.org/t/p/w500/etj8E2o0Bud0HkONVQPjyCkIvpv.jpg", desc:"An internal succession war within House Targaryen at the height of its power, 172 years before the birth of Daenerys Targaryen." },
+  { id:107, title:"The Crown", year:2016, match:95, rating:"TV-MA", genre:["Drama","History"], type:"show", cast:"Claire Foy, Olivia Colman, Imelda Staunton", img:"https://image.tmdb.org/t/p/w780/1M876KPjulVwppEpldhdc8V4o68.jpg", thumb:"https://image.tmdb.org/t/p/w500/1M876KPjulVwppEpldhdc8V4o68.jpg", desc:"Follows the political rivalries and romance of Queen Elizabeth II's reign and the events that shaped the second half of the twentieth century." },
+  { id:108, title:"Squid Game", year:2021, match:98, rating:"TV-MA", genre:["Thriller","Drama"], type:"show", cast:"Lee Jung-jae, Park Hae-soo, Wi Ha-jun", img:"https://image.tmdb.org/t/p/w780/dDlEmu3EZ0Pgg93K2SVNLCjCSvE.jpg", thumb:"https://image.tmdb.org/t/p/w500/dDlEmu3EZ0Pgg93K2SVNLCjCSvE.jpg", desc:"Hundreds of cash-strapped players accept a strange invitation to compete in children's games. Inside, a tempting prize awaits — with deadly stakes." },
+  { id:109, title:"Severance", year:2022, match:97, rating:"TV-MA", genre:["Sci-Fi","Thriller","Drama"], type:"show", cast:"Adam Scott, Patricia Arquette, John Turturro", img:"https://image.tmdb.org/t/p/w780/lNKKU2zAGGOiQPCQhfYDrBHO0wk.jpg", thumb:"https://image.tmdb.org/t/p/w500/lNKKU2zAGGOiQPCQhfYDrBHO0wk.jpg", desc:"Mark leads a team of office workers whose memories have been surgically divided between their work and personal lives." },
+  { id:110, title:"White Lotus", year:2021, match:96, rating:"TV-MA", genre:["Drama","Comedy","Mystery"], type:"show", cast:"Mike White, Jennifer Coolidge, Murray Bartlett", img:"https://image.tmdb.org/t/p/w780/oKQhXpSEeyFqhMkOvX3TJHSgjWY.jpg", thumb:"https://image.tmdb.org/t/p/w500/oKQhXpSEeyFqhMkOvX3TJHSgjWY.jpg", desc:"Social satire set at an exotic luxury resort. Over the course of a week, various guests and hotel employees engage in exploitative relationships." },
+  { id:111, title:"Andor", year:2022, match:97, rating:"TV-14", genre:["Sci-Fi","Action","Drama"], type:"show", cast:"Diego Luna, Stellan Skarsgård, Adria Arjona", img:"https://image.tmdb.org/t/p/w780/59SVNwLfoMnZPPB6ukW6dlPxAdI.jpg", thumb:"https://image.tmdb.org/t/p/w500/59SVNwLfoMnZPPB6ukW6dlPxAdI.jpg", desc:"The tale of the burgeoning rebellion against the Empire and how people and planets became involved in the conflict." },
+  { id:112, title:"The Bear Season 2", year:2023, match:98, rating:"TV-MA", genre:["Drama","Comedy"], type:"show", cast:"Jeremy Allen White, Ayo Edebiri, Ebon Moss-Bachrach", img:"https://image.tmdb.org/t/p/w780/sHFlbKS3WLqMnp9t2ghADIJFnuQ.jpg", thumb:"https://image.tmdb.org/t/p/w500/sHFlbKS3WLqMnp9t2ghADIJFnuQ.jpg", desc:"Carmy and Sydney pivot to open a real restaurant, pushing everyone to the brink in a high-stakes transformation of The Beef." },
+];
+
+const ALL = [...MOVIES, ...SHOWS];
+let myList = JSON.parse(localStorage.getItem('netflai_mylist') || '[]');
+let currentModal = null;
+let heroItem = null;
+let searchTimer = null;
+
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+function makeRows(container, items, extra = []) {
+  const rows = [
+    { title: "Trending Now", items: shuffle(items).slice(0, 8) },
+    { title: "Top Picks For You", items: shuffle(items).slice(0, 8), ai: true },
+    ...extra
+  ];
+  container.innerHTML = rows.map((row, i) => `
+    <div class="row">
+      <div class="row-title">${row.title}${row.ai ? '<span class="ai-tag">AI</span>' : ''}</div>
+      <div class="row-track-wrap">
+        <div class="row-arrow left" onclick="scrollRow(${i}, -1)">‹</div>
+        <div class="row-track" id="row-${i}-${container.id}">
+          ${row.items.map(m => cardHTML(m)).join('')}
+        </div>
+        <div class="row-arrow right" onclick="scrollRow(${i}, 1)">›</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function cardHTML(item) {
+  return `<div class="card" onclick="openModal(${item.id})">
+    <img src="${item.thumb}" alt="${item.title}" loading="lazy" onerror="this.style.background='#333'; this.style.display='none';" />
+    <div class="card-overlay">
+      <div class="card-title">${item.title}</div>
+      <div class="card-actions">
+        <div class="card-btn play" onclick="event.stopPropagation(); playItem(${item.id})">▶</div>
+        <div class="card-btn" onclick="event.stopPropagation(); addToList(${item.id})">+</div>
+        <div class="card-btn" onclick="event.stopPropagation(); openModal(${item.id})">ℹ</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function scrollRow(i, dir) {
+  const el = document.querySelector(`[id^="row-${i}-"]`);
+  if (el) el.scrollLeft += dir * 500;
+}
+
+function initHome() {
+  heroItem = MOVIES[Math.floor(Math.random() * 4)];
+  document.getElementById('hero-img').src = heroItem.img;
+  document.getElementById('hero-title').textContent = heroItem.title;
+  document.getElementById('hero-match').textContent = heroItem.match + '% Match';
+  document.getElementById('hero-year').textContent = heroItem.year;
+  document.getElementById('hero-rating').textContent = heroItem.rating;
+  document.getElementById('hero-desc').textContent = heroItem.desc;
+
+  const container = document.getElementById('rows-container');
+  makeRows(container, ALL, [
+    { title: "Because You Watched " + ALL[2].title, items: shuffle(MOVIES).slice(0, 8) },
+    { title: "Award-Winning Dramas", items: ALL.filter(m => m.genre.includes('Drama')).slice(0, 8) },
+    { title: "Sci-Fi & Fantasy", items: ALL.filter(m => m.genre.includes('Sci-Fi') || m.genre.includes('Fantasy')).slice(0, 8) },
+    { title: "Critically Acclaimed Shows", items: shuffle(SHOWS).slice(0, 8), ai: true },
+  ]);
+}
+
+function initTVShows() {
+  const genres = [...new Set(SHOWS.flatMap(s => s.genre))];
+  document.getElementById('tvshow-genres').innerHTML = genres.map(g =>
+    `<div class="genre-pill" onclick="filterShows('${g}', this)">${g}</div>`).join('');
+  makeRows(document.getElementById('tvshow-rows'), SHOWS, [
+    { title: "Thriller & Mystery", items: SHOWS.filter(s => s.genre.includes('Thriller') || s.genre.includes('Mystery')) },
+    { title: "Critically Acclaimed", items: SHOWS.filter(s => s.match >= 97) },
+  ]);
+}
+
+function filterShows(genre, el) {
+  document.querySelectorAll('#tvshow-genres .genre-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = SHOWS.filter(s => s.genre.includes(genre));
+  makeRows(document.getElementById('tvshow-rows'), filtered);
+}
+
+function initMovies() {
+  const genres = [...new Set(MOVIES.flatMap(m => m.genre))];
+  document.getElementById('movies-genres').innerHTML = genres.map(g =>
+    `<div class="genre-pill" onclick="filterMovies('${g}', this)">${g}</div>`).join('');
+  makeRows(document.getElementById('movies-rows'), MOVIES, [
+    { title: "Action & Adventure", items: MOVIES.filter(m => m.genre.includes('Action') || m.genre.includes('Adventure')) },
+    { title: "Award Winners", items: MOVIES.filter(m => m.match >= 97) },
+  ]);
+}
+
+function filterMovies(genre, el) {
+  document.querySelectorAll('#movies-genres .genre-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = MOVIES.filter(m => m.genre.includes(genre));
+  makeRows(document.getElementById('movies-rows'), filtered);
+}
+
+function showSection(name) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-links span').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  const idx = {home:0, tvshows:1, movies:2, mylist:3};
+  document.querySelectorAll('.nav-links span')[idx[name]]?.classList.add('active');
+
+  if (name === 'tvshows' && !document.getElementById('tvshow-rows').innerHTML) initTVShows();
+  if (name === 'movies' && !document.getElementById('movies-rows').innerHTML) initMovies();
+  if (name === 'mylist') renderMyList();
+}
+
+function renderMyList() {
+  const grid = document.getElementById('mylist-grid');
+  const empty = document.getElementById('mylist-empty');
+  const items = myList.map(id => ALL.find(x => x.id === id)).filter(Boolean);
+  if (items.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = items.map(item => `
+    <div class="mylist-card" onclick="openModal(${item.id})">
+      <img src="${item.thumb}" alt="${item.title}" />
+      <div class="mylist-title">${item.title}</div>
+      <div class="mylist-remove" onclick="event.stopPropagation(); removeFromList(${item.id}, this)">✕</div>
+    </div>
+  `).join('');
+}
+
+function addToList(id) {
+  if (!myList.includes(id)) {
+    myList.push(id);
+    localStorage.setItem('netflai_mylist', JSON.stringify(myList));
+    const item = ALL.find(x => x.id === id);
+    showToast('Added to My List: ' + item.title);
+  } else {
+    showToast('Already in My List');
+  }
+  updateMyListBtn();
+}
+
+function removeFromList(id, el) {
+  myList = myList.filter(x => x !== id);
+  localStorage.setItem('netflai_mylist', JSON.stringify(myList));
+  el.closest('.mylist-card').remove();
+  if (myList.length === 0) document.getElementById('mylist-empty').style.display = 'block';
+  updateMyListBtn();
+}
+
+function toggleMyList() {
+  if (!currentModal) return;
+  if (myList.includes(currentModal.id)) {
+    myList = myList.filter(x => x !== currentModal.id);
+    showToast('Removed from My List');
+  } else {
+    myList.push(currentModal.id);
+    showToast('Added to My List!');
+  }
+  localStorage.setItem('netflai_mylist', JSON.stringify(myList));
+  updateMyListBtn();
+}
+
+function updateMyListBtn() {
+  const btn = document.getElementById('modal-mylist-btn');
+  if (!btn || !currentModal) return;
+  btn.textContent = myList.includes(currentModal.id) ? '✓ In My List' : '+ My List';
+}
+
+async function openModal(id) {
+  const item = ALL.find(x => x.id === id);
+  if (!item) return;
+  currentModal = item;
+  document.getElementById('modal-img').src = item.img;
+  document.getElementById('modal-title').textContent = item.title;
+  document.getElementById('modal-meta').innerHTML = `
+    <span class="match">${item.match}% Match</span>
+    <span>${item.year}</span>
+    <span class="hd">HD</span>
+    <span style="color:#ccc">${item.rating}</span>
+    <span style="color:#ccc">${item.genre.join(' · ')}</span>
+  `;
+  document.getElementById('modal-desc').textContent = item.desc;
+  document.getElementById('modal-cast').innerHTML = `<strong>Cast:</strong> ${item.cast}<br><strong>Type:</strong> ${item.type === 'movie' ? 'Film' : 'Series'}`;
+  updateMyListBtn();
+
+  document.getElementById('ai-desc-text').textContent = 'Loading AI analysis...';
+  document.getElementById('modal-bg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  fetchAIInsight(item);
+}
+
+async function fetchAIInsight(item) {
+  const el = document.getElementById('ai-desc-text');
+  el.innerHTML = '<span class="ai-typing"></span>';
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        stream: true,
+        messages: [{
+          role: 'user',
+          content: `Give a compelling 2-3 sentence insight about the ${item.type === 'movie' ? 'film' : 'series'} "${item.title}" (${item.year}). Focus on what makes it uniquely worth watching, the themes it explores, or its cultural impact. Be specific and enthusiastic but concise. No spoilers.`
+        }]
+      })
+    });
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    el.textContent = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              text += parsed.delta.text;
+              el.textContent = text;
+            }
+          } catch {}
+        }
+      }
+    }
+    if (!text) el.textContent = item.desc;
+  } catch (e) {
+    el.textContent = item.desc;
+  }
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-bg')) return;
+  if (e === undefined || e.target === document.getElementById('modal-bg')) {
+    document.getElementById('modal-bg').classList.remove('open');
+    document.body.style.overflow = '';
+    currentModal = null;
+  }
+}
+document.querySelector('.modal-close')?.addEventListener('click', () => {
+  document.getElementById('modal-bg').classList.remove('open');
+  document.body.style.overflow = '';
+  currentModal = null;
+});
+
+function playHero() {
+  showToast('▶ Now Playing: ' + (heroItem?.title || 'Selected Title'));
+}
+function openHeroModal() {
+  if (heroItem) openModal(heroItem.id);
+}
+function playModal() {
+  showToast('▶ Now Playing: ' + (currentModal?.title || 'Selected Title'));
+}
+function playItem(id) {
+  const item = ALL.find(x => x.id === id);
+  showToast('▶ Now Playing: ' + (item?.title || 'Title'));
+}
+function likeModal() {
+  showToast('👍 Liked! We\'ll find more like this.');
+}
+
+function openSearch() {
+  document.getElementById('search-overlay').classList.add('open');
+  document.getElementById('search-main-input').focus();
+  renderSearchResults(ALL.slice(0, 12));
+}
+function closeSearch() {
+  document.getElementById('search-overlay').classList.remove('open');
+  document.getElementById('search-main-input').value = '';
+}
+
+function renderSearchResults(items) {
+  const container = document.getElementById('search-results');
+  container.innerHTML = items.map(item => `
+    <div class="search-result-card" onclick="closeSearch(); openModal(${item.id})">
+      <img src="${item.thumb}" alt="${item.title}" onerror="this.style.display='none'" />
+      <div class="search-result-title">${item.title}</div>
+    </div>
+  `).join('');
+}
+
+async function handleSearch(query) {
+  clearTimeout(searchTimer);
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    renderSearchResults(ALL.slice(0, 12));
+    document.getElementById('search-ai').style.display = 'none';
+    return;
+  }
+  const filtered = ALL.filter(x =>
+    x.title.toLowerCase().includes(q) ||
+    x.genre.some(g => g.toLowerCase().includes(q)) ||
+    x.cast.toLowerCase().includes(q)
+  );
+  renderSearchResults(filtered.length ? filtered : ALL.slice(0, 8));
+
+  searchTimer = setTimeout(async () => {
+    if (q.length < 3) return;
+    const aiBox = document.getElementById('search-ai');
+    const aiText = document.getElementById('search-ai-text');
+    aiBox.style.display = 'block';
+    aiText.innerHTML = '<span class="ai-typing"></span>';
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          stream: true,
+          messages: [{
+            role: 'user',
+            content: `A user is searching Netflix for "${query}". Give a 1-2 sentence personalized recommendation about what to watch based on this search intent. Be specific, helpful, and mention 1-2 actual titles from this list: ${ALL.map(x => x.title).join(', ')}. Keep it conversational and short.`
+          }]
+        })
+      });
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let text = '';
+      aiText.textContent = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const lines = decoder.decode(value).split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              if (parsed.delta?.text) { text += parsed.delta.text; aiText.textContent = text; }
+            } catch {}
+          }
+        }
+      }
+      if (!text) aiBox.style.display = 'none';
+    } catch { aiBox.style.display = 'none'; }
+  }, 700);
+}
+
+function showToast(msg) {
+  const wrap = document.getElementById('toast-wrap');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  wrap.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+initHome();
+</script>
+</body>
+</html>
